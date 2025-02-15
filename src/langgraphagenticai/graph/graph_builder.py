@@ -1,6 +1,9 @@
-from langgraph.graph import StateGraph
-from langgraph.prebuilt import tools_condition
-
+from langgraph.graph import StateGraph, END, MessagesState
+from langgraph.prebuilt import tools_condition,ToolNode
+from langchain_core.prompts import ChatPromptTemplate
+import datetime
+#module import
+from src.langgraphagenticai.tools.customtool import book_appointment, cancel_appointment, get_next_available_appointment
 from src.langgraphagenticai.tools.search_tool import create_tool_node, get_tools
 from src.langgraphagenticai.node.chatbot_with_tool_node import ChatbotWithToolNode
 from src.langgraphagenticai.node.basic_chatbot_node import BasicChatbotNode
@@ -57,6 +60,54 @@ class GraphBuilder:
 
         # Set entry point and compile graph
         self.graph_builder.set_entry_point("chatbot")
+    
+    # Nodes
+    def call_caller_model(self,state: MessagesState):
+        state["current_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        response = self.caller_model.invoke(state)
+        return {"messages": [response]}
+    
+     # Edges
+    def should_continue_caller(self,state: MessagesState):
+        messages = state["messages"]
+        last_message = messages[-1]
+        if not last_message.tool_calls:
+            return "end"
+        else:
+            return "continue"
+            
+    def appointment_receptionist_bot_build_graph(self):
+        caller_tools = [book_appointment, get_next_available_appointment, cancel_appointment]
+        tool_node = ToolNode(caller_tools)
+
+        caller_pa_prompt = """You are a personal assistant, and need to help the user to book or cancel appointments, you should check the available appointments before booking anything. Be extremely polite, so much so that it is almost rude.
+        Current time: {current_time}
+        """
+
+        caller_chat_template = ChatPromptTemplate.from_messages([
+            ("system", caller_pa_prompt),
+            ("placeholder", "{messages}"),
+        ])
+
+        self.caller_model = caller_chat_template | self.llm.bind_tools(caller_tools)
+
+        # Add Nodes
+        self.graph_builder.add_node("agent", self.call_caller_model)
+        self.graph_builder.add_node("action", tool_node)
+
+        # Add Edges
+        self.graph_builder.add_conditional_edges(
+            "agent",
+            self.should_continue_caller,
+            {
+                "continue": "action",
+                "end": END,
+            },
+        )
+        self.graph_builder.add_edge("action", "agent")
+
+        # Set Entry Point and build the graph
+        self.graph_builder.set_entry_point("agent")
 
 
     def setup_graph(self, usecase: str):
@@ -67,6 +118,8 @@ class GraphBuilder:
             self.basic_chatbot_build_graph()
         elif usecase == "Chatbot with Tool":
             self.chatbot_with_tool_build_graph()
+        elif usecase == "Appointment Receptionist":
+            self.appointment_receptionist_bot_build_graph()
         else:
             raise ValueError("Invalid use case selected.")
         return self.graph_builder.compile()

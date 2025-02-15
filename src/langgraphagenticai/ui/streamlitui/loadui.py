@@ -40,15 +40,10 @@ class LoadStreamlitUI:
                 
         if self.user_controls['selected_usecase'] == "Appointment Receptionist":
             col1, col2 = st.columns(2)
-
             with col1:
                 st.subheader("Appointment Manager")
-
             with col2:
                 st.subheader("Appointments")
-                
-            # TODO :: to be removed
-            st.warning("⌛Revamp is in progress...")
                     
         elif self.user_controls['selected_usecase']=="Customer Support":
             # TODO :: to be removed

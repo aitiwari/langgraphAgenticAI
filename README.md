@@ -159,7 +159,9 @@ To stop the Streamlit app, press `Ctrl+C` in the terminal where the app is runni
 **Prompt 1**: Book an appointment for priti.  
 **Prompt 2**: Yes or No.  
 **Reference**:  
-![appointment receptionist](screenshots/appointment_receptionist.png)  
+![appointment receptionist](screenshots/appointment_receptionist.png) 
+![Graph appointment booking](screenshots/graph_appointment_booking.png)  
+
 
 ### 4. Customer Support  
 **Reference**:  
