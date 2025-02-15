@@ -39,19 +39,19 @@ class LoadStreamlitUI:
                                                                                                       type="password")
                 
         if self.user_controls['selected_usecase'] == "Appointment Receptionist":
-                col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2)
 
-                with col1:
-                    st.subheader("Appointment Manager")
+            with col1:
+                st.subheader("Appointment Manager")
 
-                with col2:
-                    st.subheader("Appointments")
+            with col2:
+                st.subheader("Appointments")
+                
+            # TODO :: to be removed
+            st.warning("⌛Revamp is in progress...")
                     
-        elif self.user_controls['selected_usecase']=="Custome Support":
-            st.set_page_config(layout='wide', page_title='Flower Shop Chatbot', page_icon='💐')
-            
-        # TODO :: to be removed
-        if self.user_controls['selected_usecase'] != "Basic Chatbot":
+        elif self.user_controls['selected_usecase']=="Customer Support":
+            # TODO :: to be removed
             st.warning("⌛Revamp is in progress...")
 
         return self.user_controls

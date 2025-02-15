@@ -148,10 +148,12 @@ To stop the Streamlit app, press `Ctrl+C` in the terminal where the app is runni
 ![Graph Basic Chatbot](screenshots/graph_basic_chatbot.png) 
  
 
-### 2. Chatbot with Tool  
+### 2. Chatbot with Tool
 **Prompt**: Latest news from the India vs Australia match?  
+**Prompt2**: search latest news from india  
 **Reference**:  
-![chatbot with search tool](screenshots/chatbot_with_search_tool.png)  
+![chatbot with search tool](screenshots/chatbot_with_search_tool.png) 
+![Graph chatbot with tool](screenshots/graph_chatbot_with_tool.png)  
 
 ### 3. Appointment Receptionist  
 **Prompt 1**: Book an appointment for priti.  
