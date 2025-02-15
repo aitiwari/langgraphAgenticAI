@@ -1,0 +1,9 @@
+streamlit==1.41.1
+groq==0.13.1
+langgraph==0.2.72
+langchain_community==0.3.17
+langchain_openai==0.3.5
+langchain_core==0.3.35
+langchain_groq==0.2.4
+chromadb==0.6.3
+llama-index-embeddings-huggingface==0.5.1
