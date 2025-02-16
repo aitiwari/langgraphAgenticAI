@@ -2,6 +2,7 @@ import streamlit as st
 from langchain_core.messages import HumanMessage,AIMessage,ToolMessage
 
 from src.langgraphagenticai.tools.customtool import APPOINTMENTS
+from src.langgraphagenticai.tools.customer_support_tools import customers_database, data_protection_checks
 
 class DisplayResultStreamlit:
     def __init__(self,usecase,graph,user_message):
@@ -58,10 +59,32 @@ class DisplayResultStreamlit:
                         else:
                             with st.chat_message("assistant"):
                                 st.write(message.content)
-                            
             with col2:
                 st.header("Appointments")
                 st.write(APPOINTMENTS)
+        elif usecase == "Customer Support":
+            
+            main_col, right_col = st.columns([2, 1])
+            response = graph.invoke({
+                'messages': user_message
+            })
+            with  main_col:
+                st.session_state.message_history = response['messages']
+                for i in range(1, len(st.session_state.message_history) + 1):
+                    this_message = st.session_state.message_history[-i]
+                    if isinstance(this_message, AIMessage):
+                        message_box = st.chat_message('assistant')
+                    else:
+                        message_box = st.chat_message('user')
+                    if this_message.content:
+                        message_box.markdown(this_message.content)
+            # 3. State variables
+            with right_col:
+                st.title('customers database')
+                st.write(customers_database)
+                st.title('data protection checks')
+                st.write(data_protection_checks) 
+        
         # display graph
         if graph:
             st.write('state graph - workflow')

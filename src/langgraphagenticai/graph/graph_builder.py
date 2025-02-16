@@ -3,6 +3,7 @@ from langgraph.prebuilt import tools_condition,ToolNode
 from langchain_core.prompts import ChatPromptTemplate
 import datetime
 #module import
+from src.langgraphagenticai.node.customer_support_chatbot import Customer_Support_Bot
 from src.langgraphagenticai.tools.customtool import book_appointment, cancel_appointment, get_next_available_appointment
 from src.langgraphagenticai.tools.search_tool import create_tool_node, get_tools
 from src.langgraphagenticai.node.chatbot_with_tool_node import ChatbotWithToolNode
@@ -109,6 +110,9 @@ class GraphBuilder:
         # Set Entry Point and build the graph
         self.graph_builder.set_entry_point("agent")
 
+    def customer_support_build_graph(self):
+        obj_cs_bot = Customer_Support_Bot(llm=self.llm)
+        self.graph_builder = obj_cs_bot.chat_bot()
 
     def setup_graph(self, usecase: str):
         """
@@ -120,6 +124,8 @@ class GraphBuilder:
             self.chatbot_with_tool_build_graph()
         elif usecase == "Appointment Receptionist":
             self.appointment_receptionist_bot_build_graph()
+        elif usecase =="Customer Support":
+            self.customer_support_build_graph()
         else:
             raise ValueError("Invalid use case selected.")
         return self.graph_builder.compile()

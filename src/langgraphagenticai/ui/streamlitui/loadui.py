@@ -1,7 +1,8 @@
 import streamlit as st
 import os
 
-from src.langgraphagenticai.ui.configfile import Config
+from src.langgraphagenticai.ui.uiconfigfile import Config
+from langchain_core.messages import AIMessage, HumanMessage
 
 
 class LoadStreamlitUI:
@@ -46,7 +47,24 @@ class LoadStreamlitUI:
                 st.subheader("Appointments")
                     
         elif self.user_controls['selected_usecase']=="Customer Support":
-            # TODO :: to be removed
-            st.warning("⌛Revamp is in progress...")
+            st.subheader('Flower Shop Chatbot' + '💐')
+            greeting="Hi 🙋🏻‍♀️, I am the flower shop chatbot. How can I help?"
+
+            if 'message_history' not in st.session_state:
+                st.session_state.message_history = [AIMessage(content=greeting)]
+                
+            with st.chat_message("assistant"):
+                st.write(greeting) 
+                
+             # 1. Buttons for chat - Clear Button
+            
+        
+
+            with  st.sidebar:
+                if st.button('Clear Chat'):
+                    st.session_state.message_history = []
+
+       
+            
 
         return self.user_controls
