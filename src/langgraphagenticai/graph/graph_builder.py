@@ -3,12 +3,14 @@ from langgraph.prebuilt import tools_condition,ToolNode
 from langchain_core.prompts import ChatPromptTemplate
 import datetime
 #module import
+from src.langgraphagenticai.node import travel_planner_node
 from src.langgraphagenticai.node.customer_support_chatbot import Customer_Support_Bot
 from src.langgraphagenticai.tools.customtool import book_appointment, cancel_appointment, get_next_available_appointment
 from src.langgraphagenticai.tools.search_tool import create_tool_node, get_tools
 from src.langgraphagenticai.node.chatbot_with_tool_node import ChatbotWithToolNode
 from src.langgraphagenticai.node.basic_chatbot_node import BasicChatbotNode
 from src.langgraphagenticai.state.state import State
+from src.langgraphagenticai.node.travel_planner_node import TravelPlannerNode
 
 class GraphBuilder:
     """
@@ -62,6 +64,23 @@ class GraphBuilder:
         # Set entry point and compile graph
         self.graph_builder.set_entry_point("chatbot")
     
+    def travel_planner_build_graph(self):
+        """
+            Builds a standalone travel planning graph with itinerary generation.
+        """
+        # Initialize the Travel Planner node
+        travel_planner_node = TravelPlannerNode(self.llm)
+
+        # Add the Travel Planner node to the graph
+        self.graph_builder.add_node("travel_planner", travel_planner_node.process)
+
+        # Set the entry point to the Travel Planner node
+        self.graph_builder.set_entry_point("travel_planner")
+
+        # Define the edge to end the graph after the Travel Planner completes
+        self.graph_builder.add_edge("travel_planner", END)
+    
+    # Helper methods          
     # Nodes
     def call_caller_model(self,state: MessagesState):
         state["current_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -122,6 +141,8 @@ class GraphBuilder:
             self.basic_chatbot_build_graph()
         elif usecase == "Chatbot with Tool":
             self.chatbot_with_tool_build_graph()
+        elif usecase == "Travel Planner":
+            self.travel_planner_build_graph()
         elif usecase == "Appointment Receptionist":
             self.appointment_receptionist_bot_build_graph()
         elif usecase =="Customer Support":

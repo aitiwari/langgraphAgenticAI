@@ -168,6 +168,11 @@ To stop the Streamlit app, press `Ctrl+C` in the terminal where the app is runni
 ![cs flow](screenshots/cs_flow.png)  
 ![customer support](screenshots/customer_support.png)  
 
+### 5. Travel Planner 
+**Reference**:  
+![tp flow](screenshots/tp_flow.png)  
+![Travel planner](screenshots/travel_planner.png)  
+
 ---
 
 ## 📚 Templates & Community  

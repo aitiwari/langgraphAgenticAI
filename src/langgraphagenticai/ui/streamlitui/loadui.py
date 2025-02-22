@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+from datetime import date
 
 from src.langgraphagenticai.ui.uiconfigfile import Config
 from langchain_core.messages import AIMessage, HumanMessage
@@ -29,7 +30,10 @@ class LoadStreamlitUI:
                 # API key input
                 self.user_controls["GROQ_API_KEY"] = st.session_state["GROQ_API_KEY"] = st.text_input("API Key",
                                                                                                       type="password")
-                
+                # Validate API key
+                if not self.user_controls["GROQ_API_KEY"]:
+                    st.warning("⚠️ Please enter your GROQ API key to proceed.")
+                   
             
             # Use case selection
             self.user_controls["selected_usecase"] = st.selectbox("Select Usecases", usecase_options)
@@ -64,7 +68,31 @@ class LoadStreamlitUI:
                 if st.button('Clear Chat'):
                     st.session_state.message_history = []
 
-       
+        elif self.user_controls['selected_usecase']=="Travel Planner":
+            st.subheader("✈️ AI Travel Planner")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                source = st.text_input("📍 Source", value="London", help="Enter your travel source")
+                destination = st.text_input("📍 Destination", value="Goa", help="Enter your travel destination")
+                preferences = st.text_area(
+                    "🎯 Travel Preferences",
+                    placeholder="E.g., I prefer beach destinations, luxury stays, and adventure activities.",
+                    help="Describe your travel preferences"
+                )
+
+            with col2:
+                start_date = st.date_input("📅 Start Date", value=date.today(), help="Select your travel start date")
+                end_date = st.date_input("📅 End Date", value=date.today(), help="Select your travel end date")
+
+            if destination and preferences and start_date and end_date:
+                self.user_controls.update({
+                "source": source,
+                "destination": destination,
+                "preferences": preferences,
+                "start_date": start_date,
+                "end_date": end_date,
+            })
             
 
         return self.user_controls

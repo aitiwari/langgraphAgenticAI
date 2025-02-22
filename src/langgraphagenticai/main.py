@@ -4,6 +4,7 @@ from src.langgraphagenticai.graph.graph_builder import GraphBuilder
 from src.langgraphagenticai.ui.streamlitui.loadui import LoadStreamlitUI
 
 import streamlit as st
+import json
 
 
 # MAIN Function START
@@ -52,6 +53,17 @@ def load_langgraph_agenticai_app():
 
                 # Display output in UI
                 try:
+                     # Add travel-specific parameters to message
+                    if usecase == "Travel Planner":
+                        travel_params = {
+                            'source' : user_input.get('source'),
+                            'city': user_input.get('destination'),
+                            'start_date': user_input.get('start_date').isoformat(),
+                            'end_date': user_input.get('end_date').isoformat(),
+                            'interests': user_input.get('preferences'),
+                            'user_message' : user_message
+                        }
+                        user_message = travel_params
                     DisplayResultStreamlit(usecase,graph,user_message).display_result_on_ui()
                 except Exception as e:
                     st.error(f"Error: Failed to display results on UI - {e}")
@@ -63,18 +75,3 @@ def load_langgraph_agenticai_app():
         st.error(f"Unexpected error occurred: {e}")
 
         
-        
-                        
-       
-                
-                        
-                    
-                
-
-
-            
-
-        
-                
-                
-                

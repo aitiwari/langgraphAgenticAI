@@ -1,5 +1,6 @@
 import streamlit as st
 from langchain_core.messages import HumanMessage,AIMessage,ToolMessage
+import json
 
 from src.langgraphagenticai.tools.customtool import APPOINTMENTS
 from src.langgraphagenticai.tools.customer_support_tools import customers_database, data_protection_checks
@@ -40,6 +41,8 @@ class DisplayResultStreamlit:
                 elif type(message)==AIMessage and message.content:
                     with st.chat_message("assistant"):
                         st.write(message.content)
+        elif usecase == "Travel Planner":
+            self._display_travel_planner_results()
         elif usecase == "Appointment Receptionist":
             CONVERSATION=[]
             CONVERSATION.append(HumanMessage(content=user_message, type="human"))
@@ -89,3 +92,60 @@ class DisplayResultStreamlit:
         if graph:
             st.write('state graph - workflow')
             st.image(graph.get_graph(xray=True).draw_mermaid_png())
+            
+    def _display_travel_planner_results(self):
+        # Extract travel parameters from message
+        CONVERSATION=[]
+        CONVERSATION.append(HumanMessage(content=str(self.user_message), type="human"))
+        state = {
+                "messages": CONVERSATION,
+            }
+        print(state)
+        # Invoke the graph
+        response = self.graph.invoke(state)
+
+        # Display results
+        main_col, side_col = st.columns([3, 1])
+        
+        with main_col:
+            st.subheader("✈️ Travel Itinerary")
+            if type(response['messages'][1]) == AIMessage:
+                self._display_itinerary_details(response['messages'][1].content)
+            else:
+                st.warning("No itinerary generated yet.")
+
+        with side_col:
+            st.subheader("📌 Travel Details")
+            st.json({
+                "📍 Source": self.user_message.get('source', ''),
+                "📍 Destination": self.user_message.get('city', ''),
+                "📅 Dates": f"{self.user_message.get('start_date', '')} to {self.user_message.get('end_date', '')}",
+                "🎯 Interests": self.user_message.get('interests', ''),
+                "🧑‍💻 User Addition Request": self.user_message.get('user_message', '')
+            })
+
+    def _display_itinerary_details(self, itinerary_content):
+        """
+        Displays the itinerary details in a structured format.
+        """
+        with st.expander("📅 Full Itinerary"):
+            # Parse the itinerary content
+            sections = {
+                "Destination": itinerary_content
+            }
+            
+            # Display destination and dates
+            st.markdown(f"{sections['Destination']}")
+           
+
+    def _display_tool_calls(self, message):
+        """
+        Displays details of tool calls made during the itinerary generation.
+        """
+        with st.expander("⚙️ System Operations"):
+            st.markdown("**🔧 Tool Execution Details**")
+            st.json({
+                "Tool Used": message.name,
+                "Parameters": message.additional_kwargs,
+                "Result": message.content
+            })
