@@ -7,3 +7,4 @@ langchain_core==0.3.35
 langchain_groq==0.2.4
 chromadb==0.6.3
 llama-index-embeddings-huggingface==0.5.1
+tavily-python==0.5.1
