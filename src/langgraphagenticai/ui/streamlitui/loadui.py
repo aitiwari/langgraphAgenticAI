@@ -37,7 +37,7 @@ class LoadStreamlitUI:
                                                                                                       type="password")
                 # Validate API key
                 if not self.user_controls["GROQ_API_KEY"]:
-                    st.warning("⚠️ Please enter your GROQ API key to proceed.")
+                    st.warning("⚠️ Please enter your GROQ API key to proceed. Don't have? refer : https://console.groq.com/keys ")
                    
             
             # Use case selection
@@ -47,7 +47,9 @@ class LoadStreamlitUI:
             # API key input
                 os.environ["TAVILY_API_KEY"] = self.user_controls["TAVILY_API_KEY"] = st.session_state["TAVILY_API_KEY"] = st.text_input("TAVILY API KEY",
                                                                                                       type="password")
-                
+                # Validate API key
+                if not self.user_controls["TAVILY_API_KEY"]:
+                    st.warning("⚠️ Please enter your TAVILY_API_KEY key to proceed. Don't have? refer : https://app.tavily.com/home")
         if self.user_controls['selected_usecase'] == "Appointment Receptionist":
             col1, col2 = st.columns(2)
             with col1:
