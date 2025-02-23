@@ -3,6 +3,7 @@ from langgraph.prebuilt import tools_condition,ToolNode
 from langchain_core.prompts import ChatPromptTemplate
 import datetime
 #module import
+from src.langgraphagenticai.node.ai_news_node import AINewsNode
 from src.langgraphagenticai.node import travel_planner_node
 from src.langgraphagenticai.node.customer_support_chatbot import Customer_Support_Bot
 from src.langgraphagenticai.tools.customtool import book_appointment, cancel_appointment, get_next_available_appointment
@@ -80,7 +81,7 @@ class GraphBuilder:
         # Define the edge to end the graph after the Travel Planner completes
         self.graph_builder.add_edge("travel_planner", END)
     
-    # Helper methods          
+    # Helper methods -  START       
     # Nodes
     def call_caller_model(self,state: MessagesState):
         state["current_time"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -95,7 +96,9 @@ class GraphBuilder:
             return "end"
         else:
             return "continue"
-            
+        
+    
+    # Helper method - END     
     def appointment_receptionist_bot_build_graph(self):
         caller_tools = [book_appointment, get_next_available_appointment, cancel_appointment]
         tool_node = ToolNode(caller_tools)
@@ -132,6 +135,19 @@ class GraphBuilder:
     def customer_support_build_graph(self):
         obj_cs_bot = Customer_Support_Bot(llm=self.llm)
         self.graph_builder = obj_cs_bot.chat_bot()
+        
+    def ai_news_build_graph(self):
+        # Initialize the AINewsNode
+        ai_news_node = AINewsNode(self.llm)
+
+        self.graph_builder.add_node("fetch_news", ai_news_node.fetch_news)
+        self.graph_builder.add_node("summarize_news", ai_news_node.summarize_news)
+        self.graph_builder.add_node("save_result", ai_news_node.save_result)
+
+        self.graph_builder.set_entry_point("fetch_news")
+        self.graph_builder.add_edge("fetch_news", "summarize_news")
+        self.graph_builder.add_edge("summarize_news", "save_result")
+        self.graph_builder.add_edge("save_result", END)
 
     def setup_graph(self, usecase: str):
         """
@@ -147,6 +163,8 @@ class GraphBuilder:
             self.appointment_receptionist_bot_build_graph()
         elif usecase =="Customer Support":
             self.customer_support_build_graph()
+        elif usecase =="AI News":
+            self.ai_news_build_graph()
         else:
             raise ValueError("Invalid use case selected.")
         return self.graph_builder.compile()

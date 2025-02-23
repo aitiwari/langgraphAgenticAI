@@ -1,2 +1,4 @@
 *.pyc
 /.chroma_db
+/AINews
+*.ipynb
