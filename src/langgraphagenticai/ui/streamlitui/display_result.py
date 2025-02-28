@@ -87,7 +87,6 @@ class DisplayResultStreamlit:
                 st.write(customers_database)
                 st.title('data protection checks')
                 st.write(data_protection_checks) 
-        
         elif usecase == "AI News":
             frequency = self.user_message
             with st.spinner("Fetching and summarizing news... ⏳"):
@@ -114,11 +113,22 @@ class DisplayResultStreamlit:
                         mime="text/markdown"
                     )
                 st.success(f"✅ Summary saved to {AI_NEWS_PATH}")
-                
-            # display graph
-            if graph:
-                st.write('state graph - workflow')
-                st.image(graph.get_graph(xray=True).draw_mermaid_png())
+         
+        elif usecase == "SDLC Workflow":
+            initial_state = self.user_message
+            # Invoke the workflow node for generating user stories
+            result = graph.invoke(initial_state)
+            if 'user_stories' in result:
+                with st.expander('generated userstories'):
+                    st.markdown(result["user_stories"])
+            if 'generated_code' in result:
+                with st.expander('generated code'):
+                    st.markdown(result['generated_code'])
+                   
+        # display graph
+        if graph:
+            st.write('state graph - workflow')
+            st.image(graph.get_graph(xray=True).draw_mermaid_png())
             
     def _display_travel_planner_results(self):
         # Extract travel parameters from message

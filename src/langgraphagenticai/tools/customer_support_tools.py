@@ -4,7 +4,8 @@ import json
 
 from src.langgraphagenticai.vectorstores.vectore_store import FlowerShopVectorStore
 
-vector_store = FlowerShopVectorStore()
+
+
 INVENTORY_FILE_PATH = './data/inventory.json'
 
 customers_database = [
@@ -101,7 +102,7 @@ def query_knowledge_base(query: str) -> List[Dict[str, str]]:
     Return:
         List[Dict[str, str]]: Potentially relevant question and answer pairs from the knowledge base
     """
-    return vector_store.query_faqs(query=query)
+    return FlowerShopVectorStore().vector_store.query_faqs(query=query)
 
 
 
@@ -120,7 +121,7 @@ def search_for_product_reccommendations(description: str):
     Return:
         List[Dict[str, str]]: Potentially relevant products
     """
-    return vector_store.query_inventories(query=description)
+    return FlowerShopVectorStore().vector_store.query_inventories(query=description)
 
 @tool
 def retrieve_existing_customer_orders(customer_id: str) -> List[Dict]:

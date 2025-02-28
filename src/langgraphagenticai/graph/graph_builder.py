@@ -3,6 +3,7 @@ from langgraph.prebuilt import tools_condition,ToolNode
 from langchain_core.prompts import ChatPromptTemplate
 import datetime
 #module import
+from src.langgraphagenticai.node.sdlc_node import SDLCNode
 from src.langgraphagenticai.node.ai_news_node import AINewsNode
 from src.langgraphagenticai.node import travel_planner_node
 from src.langgraphagenticai.node.customer_support_chatbot import Customer_Support_Bot
@@ -10,7 +11,7 @@ from src.langgraphagenticai.tools.customtool import book_appointment, cancel_app
 from src.langgraphagenticai.tools.search_tool import create_tool_node, get_tools
 from src.langgraphagenticai.node.chatbot_with_tool_node import ChatbotWithToolNode
 from src.langgraphagenticai.node.basic_chatbot_node import BasicChatbotNode
-from src.langgraphagenticai.state.state import State
+from src.langgraphagenticai.state.state import State , SDLCState
 from src.langgraphagenticai.node.travel_planner_node import TravelPlannerNode
 
 class GraphBuilder:
@@ -20,6 +21,7 @@ class GraphBuilder:
     def __init__(self,model):
         self.llm = model
         self.graph_builder = StateGraph(State)
+        self.sdlc_graph_builder = StateGraph(SDLCState)
         
     def basic_chatbot_build_graph(self):
         """
@@ -148,6 +150,22 @@ class GraphBuilder:
         self.graph_builder.add_edge("fetch_news", "summarize_news")
         self.graph_builder.add_edge("summarize_news", "save_result")
         self.graph_builder.add_edge("save_result", END)
+        
+        
+    def sdlc_workflow_build_graph(self):
+        
+        sdlc_wf_node = SDLCNode(self.llm)
+        
+        self.graph_builder = self.sdlc_graph_builder
+
+        self.graph_builder.add_node("generate_user_stories", sdlc_wf_node.generate_user_stories)
+        self.graph_builder.add_node("generate_code", sdlc_wf_node.generate_code)
+
+        self.graph_builder.set_entry_point("generate_user_stories")
+        self.graph_builder.add_edge("generate_user_stories", "generate_code")
+        self.graph_builder.add_edge("generate_code", END)
+        
+
 
     def setup_graph(self, usecase: str):
         """
@@ -165,6 +183,8 @@ class GraphBuilder:
             self.customer_support_build_graph()
         elif usecase =="AI News":
             self.ai_news_build_graph()
+        elif usecase =="SDLC Workflow":
+            self.sdlc_workflow_build_graph()
         else:
             raise ValueError("Invalid use case selected.")
         return self.graph_builder.compile()

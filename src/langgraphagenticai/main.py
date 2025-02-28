@@ -7,6 +7,7 @@ import streamlit as st
 import json
 
 
+
 # MAIN Function START
 def load_langgraph_agenticai_app():
     """
@@ -28,6 +29,8 @@ def load_langgraph_agenticai_app():
         # Text input for user message
         if st.session_state.IsFetchButtonClicked:
             user_message = st.session_state.timeframe 
+        elif st.session_state.IsSDLC :
+            user_message = st.session_state.state
         else :
             user_message = st.chat_input("Enter your message:")
         if user_message:
