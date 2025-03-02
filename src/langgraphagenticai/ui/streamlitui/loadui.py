@@ -1,7 +1,9 @@
+import uuid
 import streamlit as st
 import os
 from datetime import date
 
+from src.langgraphagenticai.ui.streamlitui.sdlcfeedback import SDLCUI
 from src.langgraphagenticai.ui.uiconfigfile import Config
 from langchain_core.messages import AIMessage, HumanMessage
 
@@ -14,14 +16,20 @@ class LoadStreamlitUI:
     def initialize_session(self):
         return {
             "current_step": "requirements",
+            "decision": None,
             "requirements": "",
             "user_stories": "",
+            "design_docs": "",
+            "code": "",
+            "test_cases": "",
             "po_feedback": "",
-            "generated_code": "",
+            "design_feedback":"",
+            'generate_code':"",
             "review_feedback": "",
-            "decision": None
+            "security_feedback": "",
+            "test_feedback": "",
+            "human_decision": ""
         }
-
     def render_requirements(self):
         st.markdown("## 📝 Requirements Submission")
         st.session_state.state["requirements"] = st.text_area(
@@ -40,6 +48,8 @@ class LoadStreamlitUI:
         st.session_state.timeframe = ''
         st.session_state.IsFetchButtonClicked = False
         st.session_state.IsSDLC = False
+        ui = SDLCUI()
+        
         
         
 
@@ -73,6 +83,9 @@ class LoadStreamlitUI:
                 # Validate API key
                 if not self.user_controls["TAVILY_API_KEY"]:
                     st.warning("⚠️ Please enter your TAVILY_API_KEY key to proceed. Don't have? refer : https://app.tavily.com/home")
+        
+        if self.user_controls['selected_usecase']!="SDLC Workflow":
+            st.session_state['state'] = ''
         if self.user_controls['selected_usecase'] == "Appointment Receptionist":
             col1, col2 = st.columns(2)
             with col1:
@@ -144,11 +157,37 @@ class LoadStreamlitUI:
         # Added for SDLC Workflow
         elif self.user_controls['selected_usecase']=="SDLC Workflow":
             st.subheader(" SDLC Workflow ")
+            # if 'status' in st.session_state.state and st.session_state.state['status']== "__interrupt__" and 'decision' in st.session_state.state and st.session_state.state['decision']==None :
+            #     ui.render()
+            if "requirements" in st.session_state.state and  st.session_state.state['current_step']=="requirements":
+                ui.render_requirements(st.session_state.state)
+            # if st.session_state.state !='':
+                
+            #     ui.render()
+                
+                
             
-            
-            if "state" not in st.session_state:
+            if st.button("start workflow"):
+                st.session_state.state = ''
                 st.session_state.state = self.initialize_session()
-            self.render_requirements()
+                # Initialize session state variables.
+                if "thread_config" not in st.session_state:
+                    st.session_state.thread_config = {"configurable": {"thread_id": uuid.uuid4()}}
+                if "graph_stage" not in st.session_state:
+                    st.session_state.graph_stage = "initial"  # Stages: initial, waiting, resumed, finished.
+                if "output_chunks" not in st.session_state:
+                    st.session_state.output_chunks = []
+                if "user_decision" not in st.session_state:
+                    st.session_state.user_decision = None
+                st.session_state.IsSDLC = True
+                ui.render_requirements(st.session_state.state)
+                
+                # if st.session_state.state['current_step']=="requirements":
+                    # self.render_requirements()
+            if 'requirements' in st.session_state.state and  st.session_state.state['requirements']=='':
+                    st.stop()   
+            
+                
             
         
         return self.user_controls

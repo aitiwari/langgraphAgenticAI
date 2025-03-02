@@ -19,18 +19,53 @@ class PlannerState(TypedDict):
     start_date: str 
     end_date: str    
     
+# class SDLCState(TypedDict):
+#     current_step: Literal[
+#         "requirements",
+#         "generate_user_stories",
+#         "po_approval",
+#         "generate_code",
+#         "code_review",
+#         "completed"
+#     ]
+#     requirements: Optional[str]
+#     user_stories: Optional[str]
+#     po_feedback: Optional[str]
+#     generated_code: Optional[str]
+#     review_feedback: Optional[str]
+#     decision: Optional[Literal["approved", "feedback"]]
+    
+# from typing import TypedDict, Optional, Literal
+
 class SDLCState(TypedDict):
     current_step: Literal[
         "requirements",
         "generate_user_stories",
-        "po_approval",
+        "product_owner_review",
+        "create_design_docs",
+        "design_review",
         "generate_code",
         "code_review",
-        "completed"
+        "fix_code_after_code_review",
+        "security_review",
+        "fix_code_after_security",
+        "write_test_cases",
+        "test_cases_review",
+        "fix_test_cases",
+        "end"
     ]
+    decision: Optional[Literal["approved", "feedback"]]
+    # Content fields
     requirements: Optional[str]
     user_stories: Optional[str]
-    po_feedback: Optional[str]
+    design_docs: Optional[str]
     generated_code: Optional[str]
-    review_feedback: Optional[str]
-    decision: Optional[Literal["approved", "feedback"]]
+    test_cases: Optional[str]
+    # Feedback fields
+    po_feedback: Optional[str]          # Product Owner feedback
+    design_feedback: Optional[str]      # Design Review feedback
+    code_feedback: Optional[str]        # Code Review feedback
+    security_feedback: Optional[str]    # Security Review feedback
+    test_case_feedback: Optional[str]   # Test Case Review feedback
+    # For human input during interrupts.
+    human_decision: Optional[str]

@@ -2,7 +2,11 @@ from langgraph.graph import StateGraph, END, MessagesState
 from langgraph.prebuilt import tools_condition,ToolNode
 from langchain_core.prompts import ChatPromptTemplate
 import datetime
+from langgraph.types import interrupt, Command
+from langgraph.checkpoint.memory import MemorySaver
+import streamlit as st
 #module import
+
 from src.langgraphagenticai.node.sdlc_node import SDLCNode
 from src.langgraphagenticai.node.ai_news_node import AINewsNode
 from src.langgraphagenticai.node import travel_planner_node
@@ -150,21 +154,147 @@ class GraphBuilder:
         self.graph_builder.add_edge("fetch_news", "summarize_news")
         self.graph_builder.add_edge("summarize_news", "save_result")
         self.graph_builder.add_edge("save_result", END)
-        
-        
+    
+    
     def sdlc_workflow_build_graph(self):
-        
         sdlc_wf_node = SDLCNode(self.llm)
-        
         self.graph_builder = self.sdlc_graph_builder
+        try:
 
-        self.graph_builder.add_node("generate_user_stories", sdlc_wf_node.generate_user_stories)
-        self.graph_builder.add_node("generate_code", sdlc_wf_node.generate_code)
+            # Add all primary workflow nodes.
+            nodes = [
+                ("generate_user_stories", sdlc_wf_node.generate_user_stories),
+                ("product_owner_review", sdlc_wf_node.product_owner_review),
+                ("create_design_docs", sdlc_wf_node.create_design_docs),
+                ("revise_user_stories", sdlc_wf_node.revise_user_stories),
+                ("design_review", sdlc_wf_node.design_review),
+                ("generate_code", sdlc_wf_node.generate_code),
+                ("code_review", sdlc_wf_node.code_review),
+                ("security_review", sdlc_wf_node.security_review),
+                ("fix_code_after_code_review", sdlc_wf_node.fix_code_after_code_review),
+                ("fix_code_after_security", sdlc_wf_node.fix_code_after_security),
+                ("write_test_cases", sdlc_wf_node.write_test_cases),
+                ("test_cases_review", sdlc_wf_node.test_cases_review),
+                ("fix_test_cases", sdlc_wf_node.fix_test_cases),
+            ]
 
-        self.graph_builder.set_entry_point("generate_user_stories")
-        self.graph_builder.add_edge("generate_user_stories", "generate_code")
-        self.graph_builder.add_edge("generate_code", END)
-        
+            # Helper functions to wrap review nodes.
+            def human_loop_node(review_field):
+                def node(state):
+                    # Trigger an interrupt to surface the LLM-generated review.
+                    if st.session_state.user_decision is not  "approve":
+                        value = interrupt({
+                            "__interrupt__": True,
+                            "review": state.get(review_field, ""),
+                            "instruction": f"Please review the '{review_field}'. Approve or provide feedback to reject."
+                        })
+                    else :
+                        value = st.session_state.user_decision
+                        st.session_state.user_decision = ''
+                    return {"human_decision": value}
+                return node
+
+            def decision_node(previous_node):
+                def node(state):
+                    if state.get("human_decision") == "approve":
+                        state["decision"] = "approve"
+                    else:
+                        state["decision"] = "reject"
+                        state["feedback"] = state.get("human_decision")
+                    return state
+                return node
+
+            review_nodes = ["product_owner_review", "design_review", "code_review", "test_cases_review"]
+            additional_nodes = []
+            for review in review_nodes:
+                additional_nodes.append((f"human_loop_{review}", human_loop_node(review)))
+                # Set the previous node for rejection (adjust as needed):
+                if review == "product_owner_review":
+                    prev = "generate_user_stories"
+                elif review == "design_review":
+                    prev = "revise_user_stories"
+                elif review == "code_review":
+                    prev = "generate_code"
+                elif review == "test_cases_review":
+                    prev = "write_test_cases"
+                additional_nodes.append((f"decision_{review}", decision_node(prev)))
+
+            # Add all nodes to the graph.
+            for node_name, node_func in nodes + additional_nodes:
+                self.graph_builder.add_node(node_name, node_func)
+
+            # Set entry point.
+            if st.session_state.graph_stage == 'resumed':
+                self.graph_builder.set_entry_point(st.session_state.state['current_step'])
+            else:   
+                self.graph_builder.set_entry_point("generate_user_stories")
+
+            # ---- Build Flow Edges ----
+
+            # Wrap product_owner_review:
+            self.graph_builder.add_edge("generate_user_stories", "product_owner_review")
+            self.graph_builder.add_edge("product_owner_review", "human_loop_product_owner_review")
+            self.graph_builder.add_edge("human_loop_product_owner_review", "decision_product_owner_review")
+            self.graph_builder.add_conditional_edges(
+                "decision_product_owner_review",
+                lambda state: "approve" if state.get("decision") == "approve" else "reject",
+                {
+                    "approve": "create_design_docs",
+                    "reject": "generate_user_stories"
+                }
+            )
+
+            # Wrap design_review:
+            self.graph_builder.add_edge("revise_user_stories", "design_review")
+            self.graph_builder.add_edge("design_review", "human_loop_design_review")
+            self.graph_builder.add_edge("human_loop_design_review", "decision_design_review")
+            self.graph_builder.add_conditional_edges(
+                "decision_design_review",
+                lambda state: "approve" if state.get("decision") == "approve" else "reject",
+                {
+                    "approve": "generate_code",
+                    "reject": "revise_user_stories"
+                }
+            )
+
+            # Wrap code_review:
+            self.graph_builder.add_edge("generate_code", "code_review")
+            self.graph_builder.add_edge("code_review", "human_loop_code_review")
+            self.graph_builder.add_edge("human_loop_code_review", "decision_code_review")
+            self.graph_builder.add_conditional_edges(
+                "decision_code_review",
+                lambda state: "approve" if state.get("decision") == "approve" else "reject",
+                {
+                    "approve": "security_review",
+                    "reject": "generate_code"
+                }
+            )
+
+            # Wrap test_cases_review:
+            self.graph_builder.add_edge("write_test_cases", "test_cases_review")
+            self.graph_builder.add_edge("test_cases_review", "human_loop_test_cases_review")
+            self.graph_builder.add_edge("human_loop_test_cases_review", "decision_test_cases_review")
+            self.graph_builder.add_conditional_edges(
+                "decision_test_cases_review",
+                lambda state: "approve" if state.get("decision") == "approve" else "reject",
+                {
+                    "approve": "fix_test_cases",
+                    "reject": "write_test_cases"
+                }
+            )
+
+            # Other sequential edges.
+            self.graph_builder.add_edge("create_design_docs", "revise_user_stories")
+            self.graph_builder.add_edge("security_review", "fix_code_after_code_review")
+            self.graph_builder.add_edge("fix_code_after_code_review", "fix_code_after_security")
+            self.graph_builder.add_edge("fix_code_after_security", "write_test_cases")
+
+            # Set finish point at the end of the workflow.
+            self.graph_builder.set_finish_point("fix_test_cases")
+        except Exception as e:
+            print(e)
+
+        self.graph_builder
 
 
     def setup_graph(self, usecase: str):
@@ -184,7 +314,9 @@ class GraphBuilder:
         elif usecase =="AI News":
             self.ai_news_build_graph()
         elif usecase =="SDLC Workflow":
+            checkpointer = MemorySaver()
             self.sdlc_workflow_build_graph()
+            return self.graph_builder.compile(checkpointer=checkpointer)
         else:
             raise ValueError("Invalid use case selected.")
         return self.graph_builder.compile()

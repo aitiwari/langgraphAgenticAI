@@ -1,7 +1,11 @@
+import uuid
 import streamlit as st
 from langchain_core.messages import HumanMessage,AIMessage,ToolMessage
 import json
 
+from langgraph.types import interrupt, Command
+
+from src.langgraphagenticai.ui.streamlitui.sdlcfeedback import SDLCUI
 from src.langgraphagenticai.tools.customtool import APPOINTMENTS
 from src.langgraphagenticai.tools.customer_support_tools import customers_database, data_protection_checks
 
@@ -10,7 +14,6 @@ class DisplayResultStreamlit:
         self.usecase= usecase
         self.graph = graph
         self.user_message = user_message
-    
     
     def display_result_on_ui(self):
         usecase= self.usecase
@@ -117,18 +120,105 @@ class DisplayResultStreamlit:
         elif usecase == "SDLC Workflow":
             initial_state = self.user_message
             # Invoke the workflow node for generating user stories
-            result = graph.invoke(initial_state)
-            if 'user_stories' in result:
-                with st.expander('generated userstories'):
-                    st.markdown(result["user_stories"])
-            if 'generated_code' in result:
-                with st.expander('generated code'):
-                    st.markdown(result['generated_code'])
-                   
-        # display graph
-        if graph:
-            st.write('state graph - workflow')
-            st.image(graph.get_graph(xray=True).draw_mermaid_png())
+            
+            if 'graph_config' not in st.session_state:
+                st.session_state.graph_config = {"configurable": {"thread_id": uuid.uuid4()}}
+           
+            # Create a placeholder to show output or interrupts.
+            output_placeholder = st.empty()
+                
+            ui = SDLCUI()
+            col1, col2 = st.columns(2)  # Create two columns
+            st.session_state.state['Final_Result'] = []
+            if 'Final_Result' not in st.session_state:
+                st.session_state['Final_Result'] = []
+            with col1:
+                st.subheader('Final Result')
+                
+            with col2:
+                st.subheader('human in loop : __interrupt__')
+            if  st.session_state.graph_stage =='initial' and 'current_step' in st.session_state.state and st.session_state.state['current_step']!='' :
+                graph_stream = graph.stream(st.session_state["state"], config=st.session_state.graph_config )
+                if graph_stream:
+                    
+                    for event in graph_stream:
+                            with col1:
+                                if "__interrupt__" not in event:
+                                    for d in event.values():
+                                        st.session_state.state["Final_Result"].append(d)
+                                        if d:
+                                            for key, value in d.items():
+                                                with st.expander(label=key):
+                                                    st.markdown(value)
+                            with col2:
+                                if "__interrupt__" in event:
+                                    st.session_state.graph_stage = "waiting"
+                                    st.rerun()
+                                    break
+                else:
+                    st.session_state.graph_stage = "finished"
+            # --- Stage 2: Display Human Input UI ---
+            if st.session_state.graph_stage == "waiting":
+                with col2:
+                    col2_1, col2_2 = st.columns(2)
+                    st.info(f"Current Steps : {st.session_state.state['current_step']}")
+
+                    feedback = st.text_area("Feedback (enter text to reject)", key="feedback_input")
+                    with col2_1:
+                        if st.button("✅ Approve"):
+                            st.session_state.user_decision = "approve"
+                            st.session_state.graph_stage = "resumed"
+                            st.rerun()
+                    with col2_2:
+                        if st.button("📝 Request Change"):
+                            st.session_state.user_decision = feedback if feedback else "reject"
+                            st.session_state.graph_stage = "resumed"
+                            st.rerun()
+                            
+                    if st.session_state.graph_stage == "waiting":
+                        st.stop()
+
+            # --- Stage 3: Resume Graph Execution ---
+            # When resuming after interrupt
+            if st.session_state.graph_stage == "resumed":
+                resume_state = {
+                    "human_decision": st.session_state.user_decision,
+                }
+                for event in graph.stream(
+                    st.session_state["state"],
+                    config=st.session_state.thread_config
+                ):
+                    with col1:
+                        if "__interrupt__" not in event:
+                            for d in event.values():
+                                st.session_state.state["Final_Result"].append(d)
+                                if d:
+                                    for key, value in d.items():
+                                        with st.expander(label=key):
+                                            st.markdown(value)
+                    with col2:
+                        if "__interrupt__" in event:
+                            st.session_state.graph_stage = "waiting"
+                            st.rerun()
+                            break
+                                
+                        
+                # Determine if the workflow has reached the finish point (fix_test_cases node reached).
+                if st.session_state.state['current_step']=='completed' and any(isinstance(event, dict) and event.get("fix_test_cases") ):
+                    st.session_state.graph_stage = "finished"
+                    ui.render_end(state=st.session_state.state)
+                else:
+                    st.session_state.graph_stage = "initial"
+                st.rerun()
+
+            # --- Stage 4: Workflow Finished ---
+            if st.session_state.graph_stage == "finished":
+                st.write("### Workflow Complete")
+                ui.render_end(state=st.session_state.state)
+                if graph:
+                    st.write('state graph - workflow')
+                    st.image(graph.get_graph(xray=True).draw_mermaid_png())
+            
             
     def _display_travel_planner_results(self):
         # Extract travel parameters from message
@@ -174,7 +264,6 @@ class DisplayResultStreamlit:
             # Display destination and dates
             st.markdown(f"{sections['Destination']}")
            
-
     def _display_tool_calls(self, message):
         """
         Displays details of tool calls made during the itinerary generation.

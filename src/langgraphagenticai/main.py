@@ -18,6 +18,7 @@ def load_langgraph_agenticai_app():
     implementing exception handling for robustness.
     """
     try:
+        
         # Load UI
         ui = LoadStreamlitUI()
         user_input = ui.load_streamlit_ui()
@@ -25,11 +26,13 @@ def load_langgraph_agenticai_app():
         if not user_input:
             st.error("Error: Failed to load user input from the UI.")
             return
+        
+        user_message = ''
 
         # Text input for user message
         if st.session_state.IsFetchButtonClicked:
             user_message = st.session_state.timeframe 
-        elif st.session_state.IsSDLC :
+        elif st.session_state.IsSDLC or 'current_step' in st.session_state.state:
             user_message = st.session_state.state
         else :
             user_message = st.chat_input("Enter your message:")
