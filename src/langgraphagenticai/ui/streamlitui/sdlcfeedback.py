@@ -172,8 +172,6 @@ class SDLCUI:
         st.success("✅ SDLC Process Completed Successfully!")
         with st.expander("Requirements"):
             st.write(state.get("requirements", ""))
-        with st.expander("Decision"):
-            st.write(state.get("decision", ""))
         with st.expander("User Stories"):
             st.write(state.get("user_stories", ""))
         with st.expander("Design Documents"):

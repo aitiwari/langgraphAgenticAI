@@ -15,6 +15,26 @@ class DisplayResultStreamlit:
         self.graph = graph
         self.user_message = user_message
     
+    def load_content_for_review(self):
+        expander_labels = {
+            "user_stories": "User Stories",  # generate_user_stories
+            "po_feedback": "PO Feedback",  # product_owner_review
+            "design_docs": "Design Documents",  # create_design_docs
+            "design_feedback": "Design Feedback",  # design_review
+            "review_feedback": "Review Feedback",  # decision_design_review
+            "generate_code": "Generated Code",  # generate_code
+            "test_cases": "Test Cases",  # write_test_cases
+            "security_feedback": "Security Feedback",  # security_review
+            "test_feedback": "Test Feedback",  # decision_test_cases_review
+        }
+        non_empty_items = [(key, label, st.session_state.state.get(key, "")) for key, label in expander_labels.items() if st.session_state.state.get(key, "")]
+
+        # Get the second last item
+        if len(non_empty_items) >= 2:
+            key, label, value = non_empty_items[-2]
+            with st.expander(label):
+                st.markdown(value)
+    
     def display_result_on_ui(self):
         usecase= self.usecase
         graph = self.graph
@@ -125,58 +145,41 @@ class DisplayResultStreamlit:
                 st.session_state.graph_config = {"configurable": {"thread_id": uuid.uuid4()}}
            
             # Create a placeholder to show output or interrupts.
-            output_placeholder = st.empty()
-                
             ui = SDLCUI()
             col1, col2 = st.columns(2)  # Create two columns
             st.session_state.state['Final_Result'] = []
             if 'Final_Result' not in st.session_state:
                 st.session_state['Final_Result'] = []
-            with col1:
-                st.subheader('Final Result')
-                
-            with col2:
-                st.subheader('human in loop : __interrupt__')
             if  st.session_state.graph_stage =='initial' and 'current_step' in st.session_state.state and st.session_state.state['current_step']!='' :
                 graph_stream = graph.stream(st.session_state["state"], config=st.session_state.graph_config )
                 if graph_stream:
                     
                     for event in graph_stream:
-                            with col1:
-                                if "__interrupt__" not in event:
-                                    for d in event.values():
-                                        st.session_state.state["Final_Result"].append(d)
-                                        if d:
-                                            for key, value in d.items():
-                                                with st.expander(label=key):
-                                                    st.markdown(value)
-                            with col2:
-                                if "__interrupt__" in event:
-                                    st.session_state.graph_stage = "waiting"
-                                    st.rerun()
-                                    break
+                            if "__interrupt__" in event:
+                                st.session_state.graph_stage = "waiting"
+                                st.rerun()
+                                break
                 else:
                     st.session_state.graph_stage = "finished"
             # --- Stage 2: Display Human Input UI ---
             if st.session_state.graph_stage == "waiting":
-                with col2:
-                    col2_1, col2_2 = st.columns(2)
-                    st.info(f"Current Steps : {st.session_state.state['current_step']}")
-
-                    feedback = st.text_area("Feedback (enter text to reject)", key="feedback_input")
-                    with col2_1:
-                        if st.button("✅ Approve"):
-                            st.session_state.user_decision = "approve"
-                            st.session_state.graph_stage = "resumed"
-                            st.rerun()
-                    with col2_2:
-                        if st.button("📝 Request Change"):
-                            st.session_state.user_decision = feedback if feedback else "reject"
-                            st.session_state.graph_stage = "resumed"
-                            st.rerun()
+                col2_1, col2_2 = st.columns(2)
+                with col2_1:
+                    # Load Results:
+                    self.load_content_for_review()
+                    if st.button("✅ Approve"):
+                        st.session_state.user_decision = "approve"
+                        st.session_state.graph_stage = "resumed"
+                        st.rerun()
+                with col2_2:
+                    feedback = st.text_area(label='Provide Feedback or edit automated feedback',value=st.session_state.state['current_result'], key="feedback_input")
+                    if st.button("📝 Request Change"):
+                        st.session_state.user_decision = feedback if feedback else "reject"
+                        st.session_state.graph_stage = "resumed"
+                        st.rerun()
                             
-                    if st.session_state.graph_stage == "waiting":
-                        st.stop()
+                if st.session_state.graph_stage == "waiting":
+                    st.stop()
 
             # --- Stage 3: Resume Graph Execution ---
             # When resuming after interrupt
@@ -188,19 +191,11 @@ class DisplayResultStreamlit:
                     st.session_state["state"],
                     config=st.session_state.thread_config
                 ):
-                    with col1:
-                        if "__interrupt__" not in event:
-                            for d in event.values():
-                                st.session_state.state["Final_Result"].append(d)
-                                if d:
-                                    for key, value in d.items():
-                                        with st.expander(label=key):
-                                            st.markdown(value)
-                    with col2:
-                        if "__interrupt__" in event:
-                            st.session_state.graph_stage = "waiting"
-                            st.rerun()
-                            break
+                    # with col2:
+                    if "__interrupt__" in event:
+                        st.session_state.graph_stage = "waiting"
+                        st.rerun()
+                        break
                                 
                         
                 # Determine if the workflow has reached the finish point (fix_test_cases node reached).
