@@ -178,6 +178,8 @@ To stop the Streamlit app, press `Ctrl+C` in the terminal where the app is runni
 ![ai news flow](screenshots/ai_news_flow.png)  
 ![ai news](screenshots/ai_news.png)  
 
+### 7. SDLC Workflow 
+
 ---
 
 ## 📚 Templates & Community  
